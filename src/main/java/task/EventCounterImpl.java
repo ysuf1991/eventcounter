@@ -5,6 +5,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * EventCounterImpl реализует шаблон singleton с фабричным
+ * методом getInstance(), чтобы собрать и обрабатывать события в одном месте.
+ * События добавляются в возрастающем порядке(по метке времени в классе Event)
+ * в массив events. Для поиска количества событий используется бинарный поиск.
+ * Для оптимизации можно добавить слой который реализует очередь на запись событий,
+ * и в отдельном потоке обрабатывать накопившиеся записи(в случает когда добавление
+ * в events происходит долго и потоки начинают висеть на блокировке).
+ */
 public class EventCounterImpl implements EventCounter {
     private static final int INITIAL_CAPACITY = 100000;
     static final Duration MINUTE = Duration.ofMinutes(1L);
