@@ -34,7 +34,9 @@ public class EventCounterImpl implements EventCounter {
 
     @Override
     public void logEvent(Event.Type type) {
-        logEvent(Instant.now(), type);
+        synchronized (mutex) {
+            logEvent(Instant.now(), type);
+        }
     }
 
     /**
