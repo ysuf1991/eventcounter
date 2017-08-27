@@ -10,9 +10,6 @@ import java.util.List;
  * методом getInstance(), чтобы собрать и обрабатывать события в одном месте.
  * События добавляются в возрастающем порядке(по метке времени в классе Event)
  * в массив events. Для поиска количества событий используется бинарный поиск.
- * Для оптимизации можно добавить слой который реализует очередь на запись событий,
- * и в отдельном потоке обрабатывать накопившиеся записи(в случает когда добавление
- * в events происходит долго и потоки начинают висеть на блокировке).
  */
 public class EventCounterImpl implements EventCounter {
     private static final int INITIAL_CAPACITY = 100000;
@@ -20,33 +17,28 @@ public class EventCounterImpl implements EventCounter {
     static final Duration HOUR = Duration.ofHours(1L);
     static final Duration DAY = Duration.ofDays(1L);
 
-    private final Object mutex;
     private final List<Event> events;
+    private final EventQueueRepository queueRepository;
 
     /**
      * Конструктор предназначен для тестов.
      * В других случаях нужно использовать метод getInstance()
      */
     EventCounterImpl() {
-        mutex = this;
         events = new ArrayList<>(INITIAL_CAPACITY);
+        queueRepository = new EventQueueRepository(events);
     }
 
     @Override
     public void logEvent(Event.Type type) {
-        synchronized (mutex) {
-            logEvent(Instant.now(), type);
-        }
+        logEvent(Instant.now(), type);
     }
 
     /**
      * Метод создан для удобства тестирования. Не доступен в интерфейсе EventCounter.
      */
     void logEvent(Instant instant, Event.Type type) {
-        synchronized (mutex) {
-            Event event = new Event(type, instant.getEpochSecond());
-            events.add(event);
-        }
+        queueRepository.submit(new Event(type, instant.getEpochSecond()));
     }
 
     @Override
@@ -66,7 +58,7 @@ public class EventCounterImpl implements EventCounter {
 
     private int binarySearch(long timestamp) {
         int size = events.size();
-        if (size > 0 && events.get(size - 1).getTimeStamp() < timestamp) {
+        if (size == 0 || events.get(size - 1).getTimeStamp() < timestamp) {
             return 0;
         }
 
